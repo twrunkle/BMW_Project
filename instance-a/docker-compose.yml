@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  collector_web:
+    build: .
+    container_name: collector_web
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    restart: always

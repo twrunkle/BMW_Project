@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Telemetry Webpage</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        a { margin-top: 10px; display: inline-block; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Raw Telemetry Data</h1>
+    <pre id="data">Loading...</pre>
+
+    <a href="/dashboard">Go to Visual Dashboard</a>
+
+    <script>
+        async function fetchData() {
+            const res = await fetch('/data');
+            const json = await res.json();
+            document.getElementById('data').textContent = JSON.stringify(json, null, 2);
+        }
+
+        setInterval(fetchData, 1000);
+        fetchData();
+    </script>
+</body>
+</html>

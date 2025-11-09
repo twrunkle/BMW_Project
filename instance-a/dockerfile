@@ -1,0 +1,15 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy only the contents of app/ into /app
+COPY app/ /app/
+
+# Install dependencies
+RUN pip install --no-cache-dir flask requests
+
+# Expose the web server port (change if you want to use 9000)
+EXPOSE 9000
+
+# Run both scripts safely in the background
+CMD ["sh", "-c", "python3 /app/send_data.py & python3 /app/app.py"]
