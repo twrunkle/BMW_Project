@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:14
+    container_name: telemetry_db
+    restart: always
+    environment:
+      POSTGRES_DB: telemetry_data
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - telemetry_net
+
+volumes:
+  db_data:
+
+networks:
+  telemetry_net:
+    driver: bridge

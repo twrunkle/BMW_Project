@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS telemetry_table (
+  id SERIAL PRIMARY KEY,
+  speed INT,
+  rpm INT,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
