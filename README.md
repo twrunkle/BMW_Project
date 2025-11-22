@@ -10,4 +10,4 @@
 5. Verify the database:
    docker exec -it telemetry_db psql -U telemetry_backend -d telemetry_data
    \dt   # list tables
-6. If needed, run any SQL scripts necessary
+7. If needed, run any SQL scripts necessary
