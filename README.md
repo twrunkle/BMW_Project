@@ -2,9 +2,9 @@
 
 1. Make sure Docker and Docker Compose are installed.
 2. Clone the repository:
-   git clone <repo-url>
+   git clone repo-url
 3. Change into the repo directory:
-   cd <repo-name>
+   cd repo-name
 4. Start the containers:
    docker-compose up -d
 5. Verify the database:
