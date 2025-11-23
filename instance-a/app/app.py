@@ -32,8 +32,11 @@ def send_to_backend():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('welcome.html')
 
+@app.route('/raw')
+def raw_data():
+    return render_template('index.html')
 @app.route('/data')
 def get_data():
     try:
