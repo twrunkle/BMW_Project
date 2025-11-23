@@ -1,69 +1,543 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Telemetry Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-        }
-        a {
-            display: inline-block;
-            margin-bottom: 20px;
-            text-decoration: none;
-            color: #007bff;
-            font-weight: bold;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        .chart-container {
-            width: 80%;
-            margin: 0 auto;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Interactive Telemetry Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --muted: #6b7280;
+      --accent: #0ea5e9;
+      --card-shadow: 0 6px 18px rgba(15,23,42,0.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: var(--bg);
+      color: #0f172a;
+      padding:20px;
+    }
+    header{
+      display:flex;
+      gap:20px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:18px;
+    }
+    h1{margin:0;font-size:20px}
+    .top-actions{display:flex; gap:12px; align-items:center;}
+    a.link-back{color:var(--accent); text-decoration:none; font-weight:600}
+    .layout{
+      display:grid;
+      grid-template-columns: 320px 1fr;
+      gap:20px;
+    }
+
+    /* left controls */
+    .controls {
+      background:var(--panel);
+      padding:16px;
+      border-radius:12px;
+      box-shadow:var(--card-shadow);
+      height:calc(100vh - 120px);
+      overflow:auto;
+    }
+    .controls h2{font-size:16px;margin:0 0 8px}
+    .section{margin-bottom:14px}
+    label.small{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    .fields-list{display:flex;flex-direction:column;gap:6px; max-height:220px; overflow:auto; padding:8px; border-radius:8px; background:#fafafa; border:1px solid #eef2f7}
+    .fields-list label{display:flex; align-items:center; gap:8px; font-size:14px}
+    input[type="color"]{height:28px;width:48px;padding:0;border:0;background:none}
+
+    .form-row{display:flex; gap:8px; margin-bottom:8px; align-items:center}
+    select, input[type="text"], input[type="number"]{
+      padding:8px 10px; border-radius:8px; border:1px solid #e6eef6; font-size:14px; background:white; width:100%;
+    }
+    button{
+      background:var(--accent); color:white; padding:8px 12px; border-radius:8px; border:0; cursor:pointer; font-weight:600;
+    }
+    button.ghost{background:transparent; color:var(--accent); border:1px solid rgba(14,165,233,0.12)}
+    .small-btn{padding:6px 8px;font-size:13px}
+
+    /* right area */
+    .workspace{display:flex; flex-direction:column; gap:14px}
+    .chart-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:14px}
+    .chart-card{
+      background:var(--panel); border-radius:12px; padding:12px; box-shadow:var(--card-shadow);
+      display:flex; flex-direction:column; gap:12px;
+    }
+    .chart-header{display:flex; align-items:center; justify-content:space-between; gap:8px}
+    .meta{font-size:13px;color:var(--muted)}
+    .chart-canvas{height:320px}
+    .chart-controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+
+    footer{margin-top:18px; font-size:13px; color:var(--muted)}
+    .center{display:flex; align-items:center; justify-content:center}
+    .notice{font-size:13px;color:#b91c1c}
+  </style>
 </head>
 <body>
-    <a href="/">← Back to Raw Data</a>
-    <h1>Telemetry Dashboard</h1>
-
-    <div class="chart-container">
-        <canvas id="telemetryChart"></canvas>
+  <header>
+    <div>
+      <h1>Telemetry Dashboard</h1>
+      <div class="meta">Interactive analytics — create multiple charts, compare fields, export CSV/PNG.</div>
     </div>
+    <div class="top-actions">
+      <a class="link-back" href="/">← Back to Raw Data</a>
+      <a class="link-back" href="/data" target="_blank">View Raw JSON</a>
+    </div>
+  </header>
 
-    <script>
-        const data = {{ data | tojson }};
-        const ctx = document.getElementById('telemetryChart').getContext('2d');
+  <div class="layout">
+    <!-- Controls -->
+    <aside class="controls" id="controls">
+      <div class="section">
+        <h2>Data Source & History</h2>
+        <div class="meta">The page polls the server every second and builds a rolling history for charts.</div>
+        <div style="margin-top:8px" class="form-row">
+          <label style="width:110px">History length</label>
+          <input id="maxPoints" type="number" min="10" max="2000" value="120"/>
+        </div>
+        <div style="margin-top:6px" class="form-row">
+          <label style="width:110px">Poll interval (ms)</label>
+          <input id="pollInterval" type="number" min="200" value="1000"/>
+        </div>
+      </div>
 
-        if (!data.error) {
-            const chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(data),
-                    datasets: [{
-                        label: 'Telemetry Values',
-                        data: Object.values(data),
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: { y: { beginAtZero: true } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        } else {
-            document.body.innerHTML += `<p style="color:red; text-align:center;">Error: ${data.error}</p>`;
-        }
-    </script>
+      <div class="section">
+        <h2>Available Fields</h2>
+        <div class="meta">Pick fields below; you can use them to build charts.</div>
+        <div id="fieldsContainer" class="fields-list">
+          <!-- dynamically filled -->
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Create Chart</h2>
+        <label class="small">Chart Title</label>
+        <input id="chartTitle" type="text" placeholder="Ex: Speed vs Time" />
+
+        <label class="small" style="margin-top:8px">Chart Type</label>
+        <select id="chartType">
+          <option value="line">Line</option>
+          <option value="bar">Bar</option>
+          <option value="radar">Radar</option>
+        </select>
+
+        <label class="small" style="margin-top:8px">Select Fields (choose 1 or more)</label>
+        <div style="display:flex; gap:8px; margin-bottom:8px">
+          <button id="selectAll" class="ghost small-btn">Select All</button>
+          <button id="selectNone" class="ghost small-btn">Clear</button>
+        </div>
+
+        <label class="small" style="margin-top:6px">Dataset Color (for next created dataset)</label>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
+          <input id="datasetColor" type="color" value="#36a2eb"/>
+          <input id="labelPrefix" type="text" placeholder="Label prefix (optional)"/>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:6px">
+          <button id="addChartBtn">Add Chart</button>
+          <button id="clearCharts" class="ghost">Remove All Charts</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Actions</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="exportAllCSV" class="small-btn ghost">Export ALL history CSV</button>
+          <button id="resetHistory" class="small-btn ghost">Reset History</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px" class="section">
+        <div class="meta">Status: <span id="statusText">Initializing...</span></div>
+        <div id="errorBox" class="notice"></div>
+      </div>
+    </aside>
+
+    <!-- Workspace -->
+    <main class="workspace">
+      <div class="chart-grid" id="chartGrid">
+        <!-- charts will be appended here -->
+      </div>
+
+      <footer>
+        <div>Tip: choose related fields (eg. <em>speed</em>, <em>rpm</em>) and create separate charts to compare them. Export charts as PNG from each chart card.</div>
+      </footer>
+    </main>
+  </div>
+
+<script>
+/*
+  Interactive dashboard script
+  - Polls /data endpoint
+  - Keeps a rolling history (array of {ts, fields...})
+  - Allows creating multiple Chart.js charts with chosen fields
+  - Exports PNG and CSV
+*/
+
+const DATA_ENDPOINT = '/data';
+let history = [];                // rolling snapshot history
+let fields = [];                 // available field names
+let maxPoints = parseInt(document.getElementById('maxPoints').value, 10);
+let pollInterval = parseInt(document.getElementById('pollInterval').value, 10);
+let pollTimer = null;
+let chartCounter = 0;
+const chartStore = {};          // id -> {chart, meta}
+
+const statusText = document.getElementById('statusText');
+const errorBox = document.getElementById('errorBox');
+const fieldsContainer = document.getElementById('fieldsContainer');
+const chartGrid = document.getElementById('chartGrid');
+
+function setStatus(text, isError=false){
+  statusText.textContent = text;
+  errorBox.textContent = isError ? text : '';
+}
+
+// utility to deep copy
+function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
+
+// fetch latest data and append to history
+async function pollData(){
+  try{
+    const res = await fetch(DATA_ENDPOINT);
+    if(!res.ok) throw new Error('fetch failed ' + res.status);
+    const json = await res.json();
+    const ts = new Date().toISOString();
+    // ensure json is an object; if wrapper, adapt
+    if(json && typeof json === 'object' && !Array.isArray(json)){
+      // convert numeric-like strings to numbers when possible (best-effort)
+      const processed = Object.assign({}, json);
+      for(const k of Object.keys(processed)){
+        const v = processed[k];
+        // keep numbers as numbers
+        if(typeof v === 'string' && !isNaN(Number(v))) processed[k] = Number(v);
+      }
+      processed.__ts = ts;
+      history.push(processed);
+      if(history.length > maxPoints) history.shift();
+
+      // update fields list if needed
+      const newFields = Object.keys(processed).filter(f => f !== '__ts');
+      const changed = newFields.length !== fields.length || newFields.some(f => !fields.includes(f));
+      if(changed){
+        fields = newFields;
+        renderFieldCheckboxes();
+      }
+      setStatus(`Live — history points: ${history.length}`);
+      updateCharts();
+    } else {
+      setStatus('Unexpected data shape from /data', true);
+    }
+  }catch(err){
+    setStatus('Poll error: ' + err.message, true);
+  }
+}
+
+// start/stop polling
+function startPolling(){
+  stopPolling();
+  pollTimer = setInterval(pollData, pollInterval);
+  pollData(); // immediate
+}
+function stopPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+// render field checkboxes
+function renderFieldCheckboxes(){
+  fieldsContainer.innerHTML = '';
+  if(fields.length === 0){
+    fieldsContainer.innerHTML = '<div class="meta">No fields detected yet — waiting for data...</div>';
+    return;
+  }
+  fields.forEach(f => {
+    const id = 'field_' + f;
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="checkbox" name="field" value="${f}" id="${id}"> <span style="min-width:8px">${f}</span>`;
+    fieldsContainer.appendChild(label);
+  });
+}
+
+// ui helpers
+document.getElementById('selectAll').addEventListener('click', () => {
+  document.querySelectorAll('#fieldsContainer input[type="checkbox"]').forEach(cb => cb.checked = true);
+});
+document.getElementById('selectNone').addEventListener('click', () => {
+  document.querySelectorAll('#fieldsContainer input[type="checkbox"]').forEach(cb => cb.checked = false);
+});
+
+// Add chart button handler
+document.getElementById('addChartBtn').addEventListener('click', () => {
+  const selected = Array.from(document.querySelectorAll('#fieldsContainer input[type="checkbox"]:checked')).map(n=>n.value);
+  if(!selected.length){ alert('Pick at least one field'); return; }
+  const type = document.getElementById('chartType').value || 'line';
+  const color = document.getElementById('datasetColor').value || '#36a2eb';
+  const title = document.getElementById('chartTitle').value || 'Telemetry Chart';
+  createChartCard(title, type, selected, color);
+});
+
+// clear charts
+document.getElementById('clearCharts').addEventListener('click', () => {
+  Object.keys(chartStore).forEach(k => removeChart(k));
+});
+
+// export all history CSV
+document.getElementById('exportAllCSV').addEventListener('click', () => {
+  if(history.length === 0) { alert('No history yet'); return; }
+  downloadCSV(history, 'telemetry_history.csv');
+});
+
+// reset history
+document.getElementById('resetHistory').addEventListener('click', () => {
+  if(!confirm('Reset the local history buffer?')) return;
+  history = [];
+  updateCharts();
+});
+
+// dynamic chart creation
+function createChartCard(title, type, fieldsSelected, colorHex){
+  chartCounter += 1;
+  const cid = 'chart_' + chartCounter;
+
+  // create DOM card
+  const card = document.createElement('div');
+  card.className = 'chart-card';
+  card.id = cid + '_card';
+  card.innerHTML = `
+    <div class="chart-header">
+      <div>
+        <strong contenteditable="true" id="${cid}_title">${escapeHtml(title)}</strong>
+        <div class="meta" id="${cid}_meta">${fieldsSelected.join(', ')}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="${cid}_type">
+          <option ${type==='line'?'selected':''} value="line">Line</option>
+          <option ${type==='bar'?'selected':''} value="bar">Bar</option>
+          <option ${type==='radar'?'selected':''} value="radar">Radar</option>
+        </select>
+        <button id="${cid}_export" class="small-btn ghost">Export PNG</button>
+        <button id="${cid}_csv" class="small-btn ghost">Export CSV</button>
+        <button id="${cid}_remove" class="small-btn">Remove</button>
+      </div>
+    </div>
+    <div class="chart-canvas"><canvas id="${cid}_canvas"></canvas></div>
+    <div class="chart-controls">
+      <div class="meta">Update color / add dataset:</div>
+      <input id="${cid}_color" type="color" value="${colorHex}" />
+      <input id="${cid}_addLabel" type="text" placeholder="Label prefix (optional)"/>
+      <button id="${cid}_addDataset" class="small-btn ghost">Add Dataset</button>
+    </div>
+  `;
+  chartGrid.prepend(card);
+
+  // prepare chart data
+  const ctx = document.getElementById(cid + '_canvas').getContext('2d');
+
+  // build labels (timestamps)
+  const labels = history.map(h => h.__ts);
+
+  // create initial datasets from selected fields
+  const datasets = fieldsSelected.map((f, idx) => {
+    const color = colorHex;
+    return {
+      label: (document.getElementById(cid + '_addLabel')?.value || '') + f,
+      data: history.map(h => (h[f] !== undefined ? h[f] : null)),
+      borderColor: color,
+      backgroundColor: color,
+      fill: false,
+      tension: 0.15,
+      spanGaps: true
+    };
+  });
+
+  const chartConfig = {
+    type: type,
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        x: { display: true, title: { display: true, text: 'Time' } },
+        y: { display: true, title: { display: true, text: 'Value' }, beginAtZero: false }
+      }
+    }
+  };
+
+  const chart = new Chart(ctx, chartConfig);
+
+  // store
+  chartStore[cid] = { chart, fields: datasets.map(d => d.label) };
+
+  // handlers
+  document.getElementById(cid + '_remove').addEventListener('click', () => removeChart(cid));
+  document.getElementById(cid + '_export').addEventListener('click', () => exportChartPNG(cid));
+  document.getElementById(cid + '_csv').addEventListener('click', () => exportChartCSV(cid));
+  document.getElementById(cid + '_type').addEventListener('change', (e) => {
+    const newType = e.target.value;
+    chart.config.type = newType;
+    chart.update();
+  });
+  document.getElementById(cid + '_addDataset').addEventListener('click', () => {
+    // add dataset using currently selected fields on left
+    const selected = Array.from(document.querySelectorAll('#fieldsContainer input[type="checkbox"]:checked')).map(n=>n.value);
+    if(!selected.length){ alert('Choose fields in the left panel first'); return; }
+    const color = document.getElementById(cid + '_color').value;
+    const pref = document.getElementById(cid + '_addLabel').value || '';
+    selected.forEach(f => {
+      const ds = {
+        label: pref + f,
+        data: history.map(h => (h[f] !== undefined ? h[f] : null)),
+        borderColor: color,
+        backgroundColor: color,
+        fill: false,
+        tension: 0.15,
+        spanGaps: true
+      };
+      chart.data.datasets.push(ds);
+      chartStore[cid].fields.push(ds.label);
+    });
+    chart.update();
+  });
+
+  return cid;
+}
+
+function removeChart(cid){
+  const entry = chartStore[cid];
+  if(!entry) return;
+  try{ entry.chart.destroy(); }catch(e){}
+  const card = document.getElementById(cid + '_card');
+  if(card && card.parentNode) card.parentNode.removeChild(card);
+  delete chartStore[cid];
+}
+
+// update all charts with latest history
+function updateCharts(){
+  Object.keys(chartStore).forEach(cid => {
+    const ch = chartStore[cid].chart;
+    // update labels
+    ch.data.labels = history.map(h => h.__ts);
+    // update each dataset by label - we assume label contains field name at end or was created from a field
+    ch.data.datasets.forEach(ds => {
+      // try to find a field name inside ds.label (basic heuristic: last token)
+      const label = ds.label;
+      // try exact match to field name
+      let fieldName = null;
+      // if label matches exactly a field, use it; else try to find among fields
+      for(const f of fields){
+        if(label === f || label.endsWith(' ' + f) || label.endsWith(f)) { fieldName = f; break; }
+      }
+      // fallback: if dataset has custom property storing field, else leave data unchanged
+      if(fieldName){
+        ds.data = history.map(h => (h[fieldName] !== undefined ? h[fieldName] : null));
+      } else {
+        // if no match, keep existing data length consistent
+        ds.data = history.map((h,i) => ds.data[i] ?? null);
+      }
+    });
+    ch.update('none');
+  });
+}
+
+// export chart PNG
+function exportChartPNG(cid){
+  const entry = chartStore[cid];
+  if(!entry) return alert('chart not found');
+  const canvas = document.querySelector(`#${cid}_canvas`);
+  const url = canvas.toDataURL('image/png');
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = (document.getElementById(cid + '_title')?.textContent || 'chart') + '.png';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+// CSV download helper: rows is array of objects with keys
+function downloadCSV(rows, filename='data.csv'){
+  if(!rows || !rows.length) return alert('No data');
+  const keys = Object.keys(rows[0]);
+  const csv = [keys.join(',')].concat(
+    rows.map(r => keys.map(k => `"${(r[k]!==undefined?String(r[k]).replace(/"/g,'""'):'')}"`).join(','))
+  ).join('\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+// export individual chart CSV: pick relevant fields from history
+function exportChartCSV(cid){
+  const entry = chartStore[cid];
+  if(!entry) return alert('chart not found');
+  // gather field list by trying to extract field names from dataset labels
+  const labels = entry.chart.data.datasets.map(ds => ds.label);
+  // find matching fields
+  const pickFields = [];
+  labels.forEach(lbl => {
+    for(const f of fields){
+      if(lbl === f || lbl.endsWith(' ' + f) || lbl.endsWith(f)) { if(!pickFields.includes(f)) pickFields.push(f); }
+    }
+  });
+  if(!pickFields.length){
+    // fallback: offer user to choose from current fields
+    if(!confirm('Could not infer fields for CSV. Export all history instead?')) return;
+    downloadCSV(history, 'telemetry_history.csv');
+    return;
+  }
+  // build rows with timestamp + selected fields
+  const rows = history.map(h => {
+    const obj = { timestamp: h.__ts };
+    pickFields.forEach(f => obj[f] = h[f] !== undefined ? h[f] : '');
+    return obj;
+  });
+  downloadCSV(rows, (document.getElementById(cid + '_title')?.textContent || 'chart') + '.csv');
+}
+
+// utility escape html
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+
+// update parameters when controls change
+document.getElementById('maxPoints').addEventListener('change', (e) => {
+  maxPoints = parseInt(e.target.value, 10) || 120;
+  // trim history if necessary
+  if(history.length > maxPoints) history = history.slice(history.length - maxPoints);
+});
+document.getElementById('pollInterval').addEventListener('change', (e) => {
+  pollInterval = parseInt(e.target.value, 10) || 1000;
+  startPolling();
+});
+
+// initial setup: try to use server-passed data if available (Flask templating)
+(function init(){
+  try{
+    const serverData = {{ data | tojson }};
+    // if serverData is an object (initial bootstrap), seed history with it
+    if(serverData && typeof serverData === 'object' && !Array.isArray(serverData)){
+      const ts = new Date().toISOString();
+      const processed = Object.assign({}, serverData);
+      processed.__ts = ts;
+      history.push(processed);
+      fields = Object.keys(processed).filter(k=>k!=='__ts');
+    }
+  }catch(e){
+    // ignore if templating replaced nothing
+  }
+  renderFieldCheckboxes();
+  startPolling();
+})();
+
+</script>
 </body>
 </html>
