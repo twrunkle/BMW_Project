@@ -1,0 +1,12 @@
+# Use official PostgreSQL image
+FROM postgres:16
+
+# Set environment variables for user, password, and database
+ENV POSTGRES_USER=telemetry_backend
+ENV POSTGRES_PASSWORD=password
+ENV POSTGRES_DB=telemetry_data
+
+# Expose the default PostgreSQL port
+EXPOSE 5432
+
+# The official postgres image already has the correct entrypoint to start the server
