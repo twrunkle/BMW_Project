@@ -1,0 +1,10 @@
+#Run these commands on the CLI to read data from database table.
+
+#This logs you in to the database
+docker exec -it telemetry-db psql -U telemetry_backend -d telemetry_data
+
+#This shows you most recent inserts
+SELECT *
+FROM telemetry_table
+ORDER BY created_at DESC
+LIMIT 20;
