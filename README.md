@@ -1,6 +1,6 @@
 # Setup Database on a New Instance
 
-1. Make sure Docker and Docker Compose are installed.
+1. Make sure Docker and Docker Compose are installed:
 # Update package index
 sudo apt update
 
