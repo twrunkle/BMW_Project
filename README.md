@@ -1,3 +1,4 @@
+# Instance A = Collector, Instance B = Backend, Instance C = Database
 # Setup Database on a New Instance
 
 1. Make sure Docker and Docker Compose are installed:
